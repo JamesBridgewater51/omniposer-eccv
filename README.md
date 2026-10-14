@@ -30,8 +30,8 @@ Table data lives in `tools/tables.md` (transcribed from the paper's
 1. Create a repository (e.g. `omniposer-eccv`) and push this directory.
 2. Repo **Settings → Pages → Deploy from branch → main / (root)**.
 3. The page goes live at `https://<username>.github.io/omniposer-eccv/`.
-4. After the domain is known, set the **absolute** og:image URL in `index.html`
-   (see the TODO at the top of the file).
+4. The og:image URL in `index.html` is absolute and points at this domain —
+   update it if the site ever moves.
 
 Every `git push` to `main` re-publishes automatically — edit `index.html`,
 commit, push.
