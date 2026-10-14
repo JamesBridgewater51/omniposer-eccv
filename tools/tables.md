@@ -1,12 +1,6 @@
-# OmniPoser ECCV 2026 camera-ready: quantitative tables (web-ready JSON)
+# Quantitative tables data (Tables 1-4)
 
-Source of truth: `/tmp/eccv_cr/experiments.tex` (LaTeX table code); cross-checked against `/tmp/eccv_paper.txt` (PDF text extraction).
-
-Every cell was transcribed by hand and then mechanically re-verified by an independent parser (`/tmp/eccv_site_gather/build_and_verify.py`) that re-reads `experiments.tex` and diffs every value string, best/second flag, row order, caption, benchmark list and metric sub-header against this JSON. Verification result: **0 mismatches across 283 data cells.**
-
-`best` = printed in `\textbf{}` (best result); `second` = printed in `\underline{}` (second-best); per the paper: "Bold and underlined values indicate the best and second-best results, respectively." Cell values `v` are verbatim digit strings (e.g. `"0.230"`, `"88.0"` keep their trailing zeros); `"-"` denotes the printed dash (unavailable metric, per "For Nymeria, dashes denote unavailable metrics").
-
-## JSON
+Rendered into the page by `build_tables.py`.
 
 ```json
 {
@@ -2104,24 +2098,19 @@ Every cell was transcribed by hand and then mechanically re-verified by an indep
 }
 ```
 
-## Verification notes (second pass)
+## Notes
 
-- **Second independent audit** (separate script, different technique): re-read the JSON out of this very file, freshly regex-extracted every numeric token and every `\textbf{}/\underline{}` occurrence from the four tabular bodies of `experiments.tex` (after stripping structural digits from `\cmidrule`/`\multicolumn` spans, unit exponents like `$^2$`, and mixed tokens like `RobCap3D`), and compared multisets per table. Result: 241 numeric values + 42 dash cells = 283 cells match exactly; per-table bold counts (15/4/19/36) and underline counts (14/4/20/35) match the JSON flags exactly; metrics legend confirmed verbatim in the tex.
-- All 283 data cells, 4 captions, 4 benchmark header groups, all metric sub-header labels (with arrows), and the printed method-row order were re-parsed from the LaTeX and diffed against the JSON above: 0 value mismatches, 0 flag mismatches, 0 order mismatches.
-- Cross-check vs `/tmp/eccv_paper.txt` (rendered PDF text): every number in the four tables was located and matched (Tables 1-4, including the dash blocks for Nymeria).
-- PDF text extraction concatenates cells, so the LaTeX source was treated as authoritative; the PDF text was used as a redundant read of the digit strings only.
-
-### Structural notes
-- **Table 2 layout**: printed transposed (metrics as rows, methods as columns: HuMoR, RoHM, Ours-S, Ours-U). Normalized here to method-rows for a uniform site schema; the `layout` field records this. Benchmark is AMASS per the caption ("on AMASS"); there is no benchmark header row in the printed table.
-- **Blocks**: Tables 1, 3 and 4 print a `\midrule` between the specialist block (top: baselines + Ours-S) and the unified block (bottom: RoHM-U, RoHM++-U, Ours-U). Best/second bold+underline markings are computed **within each block** (and within each benchmark column). The `block` field on each row records this. Table 2 has a single block.
-- **Method names** are verbatim table labels: Table 4 prints `RobCap` / `RobCap3D` (the prose calls them RobustCap / RobustCap3D). `method_bold` records the `\textbf` on Ours-S / Ours-U row labels.
-- **Dashes**: Table 1 Nymeria cells for RoHM-U / RoHM++-U / Ours-U are four separate `-` cells; in Table 4 the Nymeria cells of those rows are a single `\multicolumn{7}{c}{-}` span, expanded here to one `-` per metric cell.
-
-### Ambiguities and how they were resolved
-1. **Skating units differ between tables.** The metrics legend defines "Foot Skating (FS, mm)", whose abbreviation and value range (0.22-9.51) match Table 4's `FS` column only. Tables 1-2 print `Ska`/`Skating` with values 0.018-0.685, and the prose calls 0.031 "the lowest skating ratio". Resolution: `unit: null` for Table 1 `Ska` and Table 2 `Skating` (dimensionless ratio); `unit: "mm"` for Table 4 `FS` per the legend.
-2. **Jerk unit on Nymeria (Table 4).** The legend says Jerk is km/s^3 (and the AIST++ prose uses km/s^3 for 0.29), but the Nymeria prose says "jerk (0.048 m/s^3)". Resolution: kept `unit: "km/s^3"` from the legend/table-wide definition and transcribed the value 0.048 as printed; the prose inconsistency is flagged here, not silently resolved.
-3. **TE vs T_head.** The legend's "Translation Error (T_head, mm)" maps to Table 3's `T_h` column (HMD head translation). Table 4's `TE` is a different translation metric (global/root translation; prose: "global translation (5.42 vs. 15.9 mm)"). Both recorded with unit mm, keys kept distinct (`T_h` vs `TE`).
-4. **Tie in Table 3 AMASS Con**: EgoEgo 0.92 and Ours-S 0.92 are *both* underlined (tie for second). Both carry `second: true`, exactly as printed.
-5. **Table 2 Skating underline**: RoHM 0.024 is underlined although Ours-U 0.019 is numerically second-lowest; the paper's marking is preserved as printed (0.024 `second: true`, 0.019 plain) - transcription, not correction.
-6. **Contact Accuracy** has no unit in the paper; recorded `unit: null`, direction `higher` from the `Con\uparrow` arrow.
-
+- Source: `experiments.tex` of the camera-ready package. `best` = printed in
+  `\textbf{}` (best result), `second` = printed in `\underline{}` (second-best);
+  per the paper: "Bold and underlined values indicate the best and second-best
+  results, respectively." Values are verbatim digit strings ("0.230" keeps its
+  trailing zeros); "-" marks the printed dash (unavailable metric).
+- Tables 1/3/4 have two row blocks separated by the paper's \midrule:
+  specialist rows (baselines + Ours-S) above, unified rows (RoHM-U, RoHM++-U,
+  Ours-U) below; best/second markings are computed within each block.
+- Table 2 is printed transposed in the paper (metrics as rows); normalized to
+  method-rows here. Its benchmark is AMASS per the caption.
+- Table 4 prints method labels `RobCap`/`RobCap3D` (the prose says
+  RobustCap/RobustCap3D); labels kept verbatim.
+- Skating in Tables 1-2 is a dimensionless ratio; Table 4's FS is in mm per
+  the metrics legend. Jerk is km/s^3 per the legend.

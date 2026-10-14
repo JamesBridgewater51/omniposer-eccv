@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Generate the four quantitative-result HTML tables for the ECCV OmniPoser
-project page from the verified tables JSON (/tmp/eccv_site_gather/tables.md).
+"""Render the four quantitative-results tables for the project page.
 
-The JSON was double-verified against the LaTeX source (283 cells, 0 mismatches);
-this script only renders it, so no transcription can drift.
+Input:  tools/tables.md  (the table data, transcribed from the paper's
+        experiments.tex; best/second-best flags and the specialist/unified
+        block split are recorded per cell)
+Output: tools/tables_fragment.html (paste the <!-- TABLE_n --> blocks into
+        index.html at the matching markers when the numbers change)
 
-Usage: python3 tools/build_tables.py  (writes tools/tables_fragment.html)
+Usage: python3 tools/build_tables.py
 """
 import json
 import re
