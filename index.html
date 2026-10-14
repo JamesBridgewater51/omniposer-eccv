@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="OmniPoser recovers full-body SMPL motion from a flexible combination of heterogeneous sparse inputs — 3D keypoints, sparse IMU rotations, head-mounted 6-DoF poses, or any subset thereof — within a single model, in a single ODE step.">
+  <meta name="keywords" content="OmniPoser, human motion recovery, flow matching, sparse sensors, IMU, AR/VR">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniPoser: Flexible Human Motion Recovery in the Wild with Masked Flow Matching</title>
+
+  <meta property="og:title" content="OmniPoser: Flexible Human Motion Recovery in the Wild with Masked Flow Matching">
+  <meta property="og:description" content="One model recovers full-body motion from any subset of heterogeneous sparse inputs, in a single ODE step at over 700 FPS. ECCV 2026.">
+  <!-- TODO(deploy): replace og:image with the absolute URL once the domain is fixed -->
+  <meta property="og:image" content="./static/images/teaser.jpg">
+  <meta property="og:type" content="website">
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="stylesheet" href="./static/css/eccv-site.css">
+  <link rel="icon" href="./static/images/favicon.svg">
+
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+</head>
+
+<body>
+
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a class="navbar-item" href="#top">
+      OmniPoser
+    </a>
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-start" style="flex-grow:1;justify-content:center">
+      <a class="navbar-item" href="#abstract">Abstract</a>
+      <a class="navbar-item" href="#method">Method</a>
+      <a class="navbar-item" href="#results">Results</a>
+      <a class="navbar-item" href="#qualitative">Qualitative</a>
+      <a class="navbar-item" href="#citation">Citation</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<section class="hero" id="top">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <div class="publication-venue">ECCV 2026</div>
+          <h1 class="title is-1 publication-title">OmniPoser: Flexible Human Motion Recovery in
+            the Wild with Masked Flow Matching</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><a href="#">Minghao Liu</a><sup>1,2</sup>,</span>
+            <span class="author-block"><a href="#">Tutian Tang</a><sup>1,2</sup></span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>Shanghai Jiao Tong University,</span>
+            <span class="author-block"><sup>2</sup>Shanghai Artificial Intelligence Laboratory</span>
+          </div>
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper (soon)</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="ai ai-arxiv"></i></span>
+                  <span>arXiv (soon)</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code (soon)</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TEASER ============================ -->
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <div class="hero-body">
+      <img src="./static/images/teaser.jpg" alt="From dedicated specialist models to one unified framework — teaser figure">
+      <h2 class="subtitle has-text-centered" class="cap-note" style="font-size:.9rem;color:#555">
+        <b>From dedicated specialist models to one unified framework.</b>
+        <i>Left:</i> Existing approaches require a dedicated architecture for each sensor configuration
+        (e.g. partial-body keypoints (RoHM), head-mounted 6-DoF (EgoAllo), sparse IMUs (SIP/RobustCap)),
+        making every new modality a re-engineering effort. OmniPoser incorporates all of them with one
+        flow-matching backbone and training recipe, recovering full-body SMPL motion from
+        <i>different</i> sensor configurations via the masked design.
+        <i>Right:</i> Accuracy&ndash;FPS performance across three settings. Each baseline (circle) is plotted;
+        OmniPoser (star) matches or surpasses baseline methods at &gt;700&nbsp;FPS with lower Mean Per Joint
+        Position Error (MPJPE).
+      </h2>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ABSTRACT ============================ -->
+<section class="section" id="abstract">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Recovering 3D human motion from sparse wearable sensors is challenging due to the inherent
+            noise, occlusion, and instability of real-world tracking signals. Existing approaches are
+            restricted to fixed sensor configurations and, when built on diffusion models, are
+            computationally prohibitive for real-time deployment. We propose OmniPoser, a universal
+            framework that recovers full-body SMPL motion from a flexible combination of heterogeneous
+            inputs, such as 3D keypoints, sparse IMU rotations, head-mounted 6-DoF poses, or any subset
+            thereof, within a single model. OmniPoser introduces a cross-modal masking mechanism paired
+            with a Masked Conditioning Encoder, enabling one architecture to incorporate diverse sensor
+            configurations through a masked design. A decoupled dual-stream generative backbone
+            generates complete motion via Conditional Flow Matching, requiring only a single ODE
+            integration step at inference. Across three settings and seven benchmarks, including
+            in-the-wild Nymeria and Ego-Exo4D datasets, OmniPoser performs on par with state-of-the-art
+            methods while running at over 700&nbsp;FPS. The code will be open-sourced.
+          </p>
+          <p style="text-align:center;color:#555">
+            <span class="dnerf">Keywords:</span> Human motion recovery &middot; Flow Matching models
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ METHOD ============================ -->
+<section class="section" id="method">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Method</h2>
+      </div>
+    </div>
+
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <div class="content has-text-justified">
+          <h3 class="title is-4">One model, any sensor set</h3>
+          <p>
+            Our key insight is that regardless of sensor modality, all observations can be cast as
+            <i>partial views</i> of the same canonical body representation, and the completion of
+            unobserved degrees of freedom can be formulated as a unified generative conditioning problem.
+          </p>
+          <p>
+            In order to support flexible inputs, we introduce a cross-modal masking mechanism that
+            unifies heterogeneous sensor configurations within one model. This design enables one model
+            to incorporate a wide range of input configurations, from optical motion capture
+            (|V|&nbsp;=&nbsp;22, rotations visible), to 5-point VR tracking
+            (V&nbsp;=&nbsp;{head, hands, feet}, positions only), to egocentric head-only estimation
+            (V&nbsp;=&nbsp;{head}) through our masked design.
+          </p>
+          <p>
+            Zeroing out missing entries, however, destroys the identity of unobserved joints and leads
+            to poor recovery. We therefore design a Masked Conditioning Encoder (MCE) that replaces each
+            missing joint with a learnable per-joint embedding, allowing the network to reason about
+            <i>which</i> joints are absent and recover them accordingly.
+          </p>
+
+          <h3 class="title is-4">Dual-stream flow matching</h3>
+          <p>
+            The conditioned signal C&#770; produced by the MCE is fed into a generative model based on
+            Conditional Flow Matching (CFM). A complete human motion can be split into global trajectory
+            and local body pose, however, jointly predicting them from partially observed inputs is
+            challenging because they live in different spaces: global trajectory is low-DoF (degrees of freedom) but must
+            exhibit long-horizon coherence (drift-free), while local body pose is high-DoF but primarily
+            needs to meet biomechanical constraints.
+          </p>
+          <p>
+            To address this, the denoising network v<sub>&theta;</sub> comprises two streams that are
+            trained independently yet share the same MCE conditioning interface: a <i>global stream</i>
+            that generates the root orientation r and translation &tau;, and a <i>local stream</i> that
+            generates body pose &theta;, shape &beta;, and foot contact c. At inference, a single Euler
+            integration step maps Gaussian noise onto the motion manifold conditioned on the masked
+            observations, enabling real-time motion recovery.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <img src="./static/images/pipeline.jpg" alt="OmniPoser pipeline overview figure">
+        <p class="cap-note has-text-justified" style="font-size:.9rem;color:#555">
+          <b>Overview of OmniPoser.</b> Heterogeneous observations (multi-modal 3D keypoints and
+          rotations) are unified through a cross-modal masking mechanism and processed by Masked
+          Conditioning Encoder (MCE). A decoupled dual-stream architecture (a temporal convolutional
+          UNet for global trajectory and a cross-attention Diffusion Transformer (DiT) for local body
+          pose) generates SMPL parameters via Conditional Flow Matching, achieving real-time inference
+          in a single ODE step.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ RESULTS ============================ -->
+<section class="section" id="results">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Quantitative Results</h2>
+      </div>
+    </div>
+
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <div class="content has-text-justified">
+          <p>
+            To demonstrate the unified capability of OmniPoser, we categorize different sensor
+            configurations and baseline methods into four settings.
+          </p>
+          <p>
+            <b>Setting 1 (Sparse Observation):</b> Only a sparse subset of joints is observed. We
+            evaluate two schemes: (1)&nbsp;upper-body joint positions, evaluated on AMASS and Nymeria;
+            and (2)&nbsp;a random joint masking regime, evaluated on AMASS. The baseline methods are
+            RoHM and HuMoR.
+          </p>
+          <p>
+            <b>Setting 2 (Egocentric Head 6D Pose):</b> Only head position and rotation are available
+            from HMD signals. We compare against EgoEgo and EgoAllo across AMASS, RICH, and Nymeria.
+          </p>
+          <p>
+            <b>Setting 3 (Mocap data from 6 IMUs with keypoint positions):</b> Six IMUs provide
+            rotations at root and leaf joints, while upstream methods provide keypoint positions. We
+            evaluate on AIST++, TotalCapture, and Nymeria, comparing with Stereo-Inertial Poser (SIP)
+            and RobustCap.
+          </p>
+          <p>
+            For fair comparison, we train two versions of OmniPoser during evaluation: during
+            <b>Ours-S</b> training, mask samples are drawn from the corresponding setting; during
+            <b>Ours-U</b> training, mask samples are drawn from the masking configurations stated
+            above, i.e., predefined sensor layouts and real-world observability patterns. Since there
+            are no unified baselines at present, we construct RoHM-U and RoHM++-U, which are based on
+            current specialist SOTA, RoHM.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setting 1 · upper-body -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <p class="table-caption"><b>Table 1:</b> Quantitative results of Setting 1: Sparse Observation
+          (Upper-body joint positions).</p>
+        <div class="table-wrap">
+<table class="table is-narrow is-fullwidth results-table">
+<thead><tr><th rowspan="2">Method</th>
+<th colspan="5" class="has-text-centered">AMASS</th>
+<th colspan="4" class="has-text-centered">Nymeria (In-the-wild)</th>
+</tr><tr>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">Acc↓</th>
+<th class="has-text-centered">Con↑</th>
+<th class="has-text-centered">Ska↓</th>
+<th class="has-text-centered">Pen↓</th>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">Acc↓</th>
+<th class="has-text-centered">Con↑</th>
+<th class="has-text-centered">Ska↓</th>
+</tr></thead>
+<tbody>
+<tr><th>HuMoR</th>
+<td>88.0</td>
+<td>3.3</td>
+<td>0.68</td>
+<td>0.230</td>
+<td>2.59</td>
+<td>88.5</td>
+<td>8.26</td>
+<td>0.78</td>
+<td>0.685</td>
+</tr>
+<tr><th>RoHM</th>
+<td><u>34.8</u></td>
+<td><b>2.3</b></td>
+<td><b>0.95</b></td>
+<td><u>0.078</u></td>
+<td><b>0.69</b></td>
+<td><u>59.3</u></td>
+<td><u>7.2</u></td>
+<td><u>0.91</u></td>
+<td><u>0.610</u></td>
+</tr>
+<tr><th><b>Ours-S</b></th>
+<td><b>32.1</b></td>
+<td><u>2.7</u></td>
+<td><u>0.94</u></td>
+<td><b>0.031</b></td>
+<td><u>1.84</u></td>
+<td><b>21.1</b></td>
+<td><b>1.39</b></td>
+<td><b>0.95</b></td>
+<td><b>0.033</b></td>
+</tr>
+<tr class="block-split"><th>RoHM-U</th>
+<td>158.7</td>
+<td>2.9</td>
+<td><u>0.75</u></td>
+<td>0.190</td>
+<td><u>1.48</u></td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr><th>RoHM++-U</th>
+<td><u>39.9</u></td>
+<td><b>2.3</b></td>
+<td><b>0.95</b></td>
+<td><u>0.081</u></td>
+<td><b>0.56</b></td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr><th><b>Ours-U</b></th>
+<td><b>36.7</b></td>
+<td><u>2.7</u></td>
+<td><b>0.95</b></td>
+<td><b>0.025</b></td>
+<td>9.32</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+</tbody></table></div>
+        <div class="content has-text-justified table-notes">
+          <p>
+            On AMASS, OmniPoser achieves 32.1&nbsp;mm MPJPE, outperforming both RoHM (34.8&nbsp;mm) and
+            HuMoR (88.0&nbsp;mm). We attribute this to the Masked Conditioning Encoder (MCE), which uses
+            learnable embeddings to encode global structural priors for unobserved joints. On Nymeria,
+            our model reduces MPJPE by &sim;64% over RoHM (21.1 vs. 59.3&nbsp;mm), alongside lower
+            acceleration error, proving our learned priors transfer robustly in the wild.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setting 1 · random masking -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <p class="table-caption"><b>Table 2:</b> Quantitative results of Setting 1: Sparse Observation
+          (Random joint masking) on AMASS.</p>
+        <div class="table-wrap">
+<table class="table is-narrow is-fullwidth results-table">
+<thead><tr><th>Method</th>
+<th class="has-text-centered">JPE (mm) ↓</th>
+<th class="has-text-centered">Accel. (m/s²) ↓</th>
+<th class="has-text-centered">Contact ↑</th>
+<th class="has-text-centered">Skating ↓</th>
+</tr></thead>
+<tbody>
+<tr><th>HuMoR</th>
+<td>80.5</td>
+<td>3.3</td>
+<td>0.78</td>
+<td>0.184</td>
+</tr>
+<tr><th>RoHM</th>
+<td><u>38.2</u></td>
+<td><b>1.9</b></td>
+<td><u>0.95</u></td>
+<td><u>0.024</u></td>
+</tr>
+<tr><th><b>Ours-S</b></th>
+<td><b>35.7</b></td>
+<td><u>2.2</u></td>
+<td><b>0.97</b></td>
+<td><b>0.018</b></td>
+</tr>
+<tr><th><b>Ours-U</b></th>
+<td>49.3</td>
+<td>2.6</td>
+<td>0.93</td>
+<td>0.019</td>
+</tr>
+</tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Setting 2 -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <p class="table-caption"><b>Table 3:</b> Quantitative results of Setting 2: Egocentric Head 6D
+          Pose.</p>
+        <div class="table-wrap">
+<table class="table is-narrow is-fullwidth results-table">
+<thead><tr><th rowspan="2">Method</th>
+<th colspan="4" class="has-text-centered">AMASS</th>
+<th colspan="4" class="has-text-centered">RICH (Cross-domain)</th>
+<th colspan="3" class="has-text-centered">Nymeria (Wild)</th>
+</tr><tr>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">PA↓</th>
+<th class="has-text-centered">Con↑</th>
+<th class="has-text-centered">T_h↓</th>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">PA↓</th>
+<th class="has-text-centered">Con↑</th>
+<th class="has-text-centered">T_h↓</th>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">PA↓</th>
+<th class="has-text-centered">Con↑</th>
+</tr></thead>
+<tbody>
+<tr><th>EgoEgo</th>
+<td>167.4</td>
+<td>145.8</td>
+<td><u>0.92</u></td>
+<td>54.9</td>
+<td>207.8</td>
+<td>187.8</td>
+<td><u>0.88</u></td>
+<td>66.5</td>
+<td>135.8</td>
+<td>117.2</td>
+<td>0.57</td>
+</tr>
+<tr><th>EgoAllo</th>
+<td><u>119.7</u></td>
+<td><u>101.1</u></td>
+<td><b>1.00</b></td>
+<td><b>6.2</b></td>
+<td><u>176.2</u></td>
+<td><u>160.1</u></td>
+<td><b>0.96</b></td>
+<td><b>8.9</b></td>
+<td><u>103.0</u></td>
+<td><u>89.3</u></td>
+<td><u>0.63</u></td>
+</tr>
+<tr><th><b>Ours-S</b></th>
+<td><b>83.2</b></td>
+<td><b>73.5</b></td>
+<td><u>0.92</u></td>
+<td><u>17.1</u></td>
+<td><b>131.6</b></td>
+<td><b>111.5</b></td>
+<td>0.71</td>
+<td><u>25.7</u></td>
+<td><b>40.7</b></td>
+<td><b>36.2</b></td>
+<td><b>0.94</b></td>
+</tr>
+<tr class="block-split"><th>RoHM-U</th>
+<td>124.3</td>
+<td>101.5</td>
+<td><u>0.94</u></td>
+<td>36.7</td>
+<td>195.0</td>
+<td>115.4</td>
+<td>0.62</td>
+<td>56.8</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr><th>RoHM++-U</th>
+<td><u>94.5</u></td>
+<td><u>92.5</u></td>
+<td><b>0.96</b></td>
+<td><b>19.5</b></td>
+<td><b>126.3</b></td>
+<td><u>112.3</u></td>
+<td><b>0.72</b></td>
+<td><b>44.8</b></td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr><th><b>Ours-U</b></th>
+<td><b>86.2</b></td>
+<td><b>69.8</b></td>
+<td>0.92</td>
+<td><u>33.2</u></td>
+<td><u>134.8</u></td>
+<td><b>106.4</b></td>
+<td><u>0.65</u></td>
+<td><u>50.7</u></td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+</tbody></table></div>
+        <div class="content has-text-justified table-notes">
+          <p>
+            On AMASS, Ours-S achieves 83.2&nbsp;mm MPJPE, Ours-U achieves 86.2&nbsp;mm MPJPE
+            (&sim;30% improvement over EgoAllo's 119.7&nbsp;mm and 50% over EgoEgo's
+            167.4&nbsp;mm). Without hard-coding the head pose, our DiT's cross-attention propagates the
+            6-DoF HMD signal globally, allowing our method to outperform those baselines on full-body
+            recovery.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setting 3 -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <p class="table-caption"><b>Table 4:</b> Quantitative results of Setting 3: Mocap Data from
+          6 IMUs with Keypoint Positions.</p>
+        <div class="table-wrap">
+<table class="table is-narrow is-fullwidth results-table">
+<thead><tr><th rowspan="2">Method</th>
+<th colspan="7" class="has-text-centered">AIST++</th>
+<th colspan="7" class="has-text-centered">TotalCapture</th>
+<th colspan="7" class="has-text-centered">Nymeria (In-the-wild)</th>
+</tr><tr>
+<th class="has-text-centered">PA↓</th>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">PVE↓</th>
+<th class="has-text-centered">TE↓</th>
+<th class="has-text-centered">HS↓</th>
+<th class="has-text-centered">Jrk↓</th>
+<th class="has-text-centered">FS↓</th>
+<th class="has-text-centered">PA↓</th>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">PVE↓</th>
+<th class="has-text-centered">TE↓</th>
+<th class="has-text-centered">HS↓</th>
+<th class="has-text-centered">Jrk↓</th>
+<th class="has-text-centered">FS↓</th>
+<th class="has-text-centered">PA↓</th>
+<th class="has-text-centered">JPE↓</th>
+<th class="has-text-centered">PVE↓</th>
+<th class="has-text-centered">TE↓</th>
+<th class="has-text-centered">HS↓</th>
+<th class="has-text-centered">Jrk↓</th>
+<th class="has-text-centered">FS↓</th>
+</tr></thead>
+<tbody>
+<tr><th>SIP</th>
+<td>23.1</td>
+<td>29.8</td>
+<td>39.0</td>
+<td><b>11.31</b></td>
+<td><u>8.91</u></td>
+<td><u>1.50</u></td>
+<td><u>0.57</u></td>
+<td>28.6</td>
+<td>46.5</td>
+<td>54.3</td>
+<td><b>5.42</b></td>
+<td><b>10.6</b></td>
+<td><u>0.94</u></td>
+<td><b>0.69</b></td>
+<td>15.2</td>
+<td><u>17.0</u></td>
+<td><u>16.8</u></td>
+<td><b>4.13</b></td>
+<td><b>5.22</b></td>
+<td><u>0.059</u></td>
+<td><b>0.25</b></td>
+</tr>
+<tr><th>RobCap</th>
+<td>24.0</td>
+<td>33.1</td>
+<td>43.2</td>
+<td>19.92</td>
+<td>9.34</td>
+<td>2.49</td>
+<td>0.61</td>
+<td>33.5</td>
+<td>48.7</td>
+<td>63.4</td>
+<td>23.5</td>
+<td>13.4</td>
+<td>2.09</td>
+<td>1.40</td>
+<td>16.5</td>
+<td>19.5</td>
+<td>19.4</td>
+<td>4.52</td>
+<td>7.51</td>
+<td>1.56</td>
+<td>0.54</td>
+</tr>
+<tr><th>RobCap3D</th>
+<td><u>21.8</u></td>
+<td><u>28.5</u></td>
+<td><u>37.6</u></td>
+<td><u>15.82</u></td>
+<td>8.95</td>
+<td>2.31</td>
+<td>0.59</td>
+<td><u>27.9</u></td>
+<td><u>42.3</u></td>
+<td><u>52.8</u></td>
+<td><u>9.74</u></td>
+<td><u>12.8</u></td>
+<td>1.87</td>
+<td>1.22</td>
+<td><u>15.0</u></td>
+<td>17.8</td>
+<td>17.5</td>
+<td><u>4.25</u></td>
+<td><u>7.18</u></td>
+<td>1.41</td>
+<td>0.48</td>
+</tr>
+<tr><th><b>Ours-S</b></th>
+<td><b>19.4</b></td>
+<td><b>26.0</b></td>
+<td><b>32.9</b></td>
+<td>16.54</td>
+<td><b>7.40</b></td>
+<td><b>0.29</b></td>
+<td><b>0.22</b></td>
+<td><b>26.5</b></td>
+<td><b>36.2</b></td>
+<td><b>51.2</b></td>
+<td>15.9</td>
+<td>13.3</td>
+<td><b>0.16</b></td>
+<td><u>0.81</u></td>
+<td><b>14.5</b></td>
+<td><b>16.6</b></td>
+<td><b>16.6</b></td>
+<td>6.83</td>
+<td>7.50</td>
+<td><b>0.048</b></td>
+<td><u>0.39</u></td>
+</tr>
+<tr class="block-split"><th>RoHM-U</th>
+<td>123.5</td>
+<td>157.5</td>
+<td>185.9</td>
+<td>76.3</td>
+<td>38.1</td>
+<td><b>0.21</b></td>
+<td><u>9.49</u></td>
+<td>78.6</td>
+<td>95.3</td>
+<td>100.4</td>
+<td>22.8</td>
+<td>19.5</td>
+<td>0.19</td>
+<td><u>0.95</u></td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr><th>RoHM++-U</th>
+<td><u>89.5</u></td>
+<td><u>136.5</u></td>
+<td><u>128.5</u></td>
+<td><u>56.1</u></td>
+<td><u>32.1</u></td>
+<td><b>0.21</b></td>
+<td>9.51</td>
+<td><b>18.7</b></td>
+<td><b>29.0</b></td>
+<td><b>26.3</b></td>
+<td><u>17.5</u></td>
+<td><b>8.3</b></td>
+<td><b>0.07</b></td>
+<td>2.06</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr><th><b>Ours-U</b></th>
+<td><b>21.4</b></td>
+<td><b>29.3</b></td>
+<td><b>40.4</b></td>
+<td><b>17.5</b></td>
+<td><b>7.9</b></td>
+<td><u>1.73</u></td>
+<td><b>1.05</b></td>
+<td><u>23.4</u></td>
+<td><u>35.5</u></td>
+<td><u>47.2</u></td>
+<td><b>15.7</b></td>
+<td><u>11.1</u></td>
+<td><u>0.15</u></td>
+<td><b>0.86</b></td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+</tbody></table></div>
+        <div class="content has-text-justified table-notes">
+          <p>
+            On Nymeria, OmniPoser's lower MPJPE (16.6&nbsp;mm) and jerk (0.048&nbsp;m/s&sup3;)
+            reinforce that our cross-modal masking conditioning effectively learns unified kinematic
+            priors, avoiding the need to tune multi-modal sensor fusion heuristics for real-world
+            deployment.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="conventions has-text-centered" style="font-size:.8rem;color:#555">
+      Bold and underlined values indicate the best and second-best results, respectively.
+      &ndash;&nbsp;: not available.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ QUALITATIVE ============================ -->
+<section class="section" id="qualitative">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Qualitative Results</h2>
+      </div>
+    </div>
+
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <div class="content has-text-justified">
+          <p>
+            We present qualitative visualization results on 3DPW and Ego-Exo4D to show performance in
+            unconstrained outdoor and ego-centric scenes. Given a speed-vault clip, one model produces
+            plausible reconstructions under five distinct masking configurations at inference time.
+          </p>
+          <p>
+            On 3DPW, OmniPoser produces coherent walking gaits and seated interactions in outdoor
+            scenes, validating that kinematic priors learned from controlled mocap datasets generalize
+            to in-the-wild domains. On Ego-Exo4D, OmniPoser recovers whole-body motion from ego-centric
+            basketball and bicycle-repair activities involving complex body-object interactions,
+            showing our method's applicability to AR/VR capture scenes.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <img src="./static/images/qualitative.png" alt="Qualitative results figure">
+        <p class="cap-note has-text-justified" style="font-size:.9rem;color:#555">
+          <b>Qualitative results.</b> <i>Row 1:</i> Five masking configurations applied to the same
+          speed-vault sequence from AMASS dataset. Meshes in gold are the predictions. The mesh on the
+          rightmost is the ground truth. <i>Row 2&ndash;3:</i> Visualizations on different datasets. For more qualitative results,
+          please refer to the supplementary material.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CITATION ============================ -->
+<section class="section" id="citation">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">Citation</h2>
+        <pre><code>@inproceedings{liu2026omniposer,
+  author    = {Liu, Minghao and Tang, Tutian},
+  title     = {OmniPoser: Flexible Human Motion Recovery in the Wild with Masked Flow Matching},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  year      = {2026}
+}</code></pre>
+
+        <h2 class="title is-4 has-text-centered" style="margin-top:2.5rem">Acknowledgements</h2>
+        <p class="cap-note has-text-justified" style="font-size:.9rem;color:#555">
+          This work was supported by Fundamental and Interdisciplinary Disciplines Breakthrough Plan of
+          the Ministry of Education of China, the Shanghai Committee of Science and Technology, China
+          (Grant No.&nbsp;24511103200), Shanghai Artificial Intelligence Laboratory, and the XPLORER
+          PRIZE grants.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <p style="font-size:.85rem;color:#555" class="has-text-centered">
+        Site template from <a href="https://nerfies.github.io">nerfies.github.io</a>
+        &middot; text extracted from the ECCV 2026 camera-ready with minor logged copy-edits
+        &middot; 2026
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.querySelector('.navbar-burger').addEventListener('click', function () {
+    this.classList.toggle('is-active');
+    document.querySelector('.navbar-menu').classList.toggle('is-active');
+  });
+</script>
+</body>
+</html>

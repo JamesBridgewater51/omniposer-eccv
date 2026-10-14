@@ -1,0 +1,38 @@
+/* Minimal structural additions for the OmniPoser ECCV project page.
+   The visual design is entirely the nerfies template's (index.css + bulma);
+   this file only adds table mechanics and print-fidelity details. */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.results-table {
+  font-size: 0.82rem;
+}
+
+.results-table th {
+  white-space: nowrap;
+}
+
+/* the paper's \midrule between specialist and unified blocks */
+.results-table tr.block-split th,
+.results-table tr.block-split td {
+  border-top: 2px solid #dbdbdb;
+}
+
+.table-caption {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+/* structural placement (no visual styling) */
+.teaser .subtitle {
+  max-width: 52rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.table-notes {
+  margin-top: 0.8rem;
+}
