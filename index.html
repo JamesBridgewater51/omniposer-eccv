@@ -24,6 +24,12 @@
   <link rel="icon" href="./static/images/favicon.svg">
 
   <script defer src="./static/js/fontawesome.all.min.js"></script>
+
+  <!-- KaTeX for the inline math in the Method section -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '\\(', right: '\\)', display: false}]});"></script>
 </head>
 
 <body>
@@ -56,7 +62,6 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <div class="publication-venue">ECCV 2026</div>
           <h1 class="title is-1 publication-title">OmniPoser: Flexible Human Motion Recovery in
             the Wild with Masked Flow Matching</h1>
           <div class="is-size-5 publication-authors">
@@ -92,11 +97,11 @@
 
           <div class="notification is-light tldr">
             <p class="has-text-centered" style="margin:0">
-              <b>TL;DR &mdash; One model, any sensors.</b> A few 3D keypoints, six IMU rotations, or a
-              single head-tracker pose are enough to recover full-body 3D motion &mdash; in one step, at
-              over 700&nbsp;FPS. Motion capture no longer needs a dedicated model for each sensor setup:
-              whatever a device measures is a partial view of one shared body model, and the rest is
-              completed.
+              <b>TL;DR &mdash; One model, any sparse signal.</b> OmniPoser recovers full-body 3D human
+              motion from 3D keypoints, sparse IMU rotations, head-mounted 6-DoF poses, or any subset
+              or combination of these signals &mdash; all within a single model. Across benchmarks it
+              matches or beats dedicated specialist models, and runs in a single step at over
+              700&nbsp;FPS.
             </p>
           </div>
         </div>
@@ -180,9 +185,9 @@
             In order to support flexible inputs, we introduce a cross-modal masking mechanism that
             unifies heterogeneous sensor configurations within one model. This design enables one model
             to incorporate a wide range of input configurations, from optical motion capture
-            (|V|&nbsp;=&nbsp;22, rotations visible), to 5-point VR tracking
-            (V&nbsp;=&nbsp;{head, hands, feet}, positions only), to egocentric head-only estimation
-            (V&nbsp;=&nbsp;{head}) through our masked design.
+            (\(|\mathcal{V}| = 22\), rotations visible), to 5-point VR tracking
+            (\(\mathcal{V} = \{\text{head, hands, feet}\}\), positions only), to egocentric head-only
+            estimation (\(\mathcal{V} = \{\text{head}\}\)) through our masked design.
           </p>
           <p>
             Zeroing out missing entries, however, destroys the identity of unobserved joints and leads
@@ -193,7 +198,7 @@
 
           <h3 class="title is-4">Dual-stream flow matching</h3>
           <p>
-            The conditioned signal C&#770; produced by the MCE is fed into a generative model based on
+            The conditioned signal \(\hat{\mathbf{C}}\) produced by the MCE is fed into a generative model based on
             Conditional Flow Matching (CFM). A complete human motion can be split into global trajectory
             and local body pose, however, jointly predicting them from partially observed inputs is
             challenging because they live in different spaces: global trajectory is low-DoF (degrees of freedom) but must
