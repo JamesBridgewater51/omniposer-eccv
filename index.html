@@ -10,8 +10,7 @@
 
   <meta property="og:title" content="OmniPoser: Flexible Human Motion Recovery in the Wild with Masked Flow Matching">
   <meta property="og:description" content="One model recovers full-body motion from any subset of heterogeneous sparse inputs, in a single ODE step at over 700 FPS. ECCV 2026.">
-  <!-- TODO(deploy): replace og:image with the absolute URL once the domain is fixed -->
-  <meta property="og:image" content="./static/images/teaser.jpg">
+  <meta property="og:image" content="https://jamesbridgewater51.github.io/omniposer-eccv/static/images/teaser.jpg">
   <meta property="og:type" content="website">
 
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
@@ -89,6 +88,16 @@
                 </a>
               </span>
             </div>
+          </div>
+
+          <div class="notification is-light tldr">
+            <p class="has-text-centered" style="margin:0">
+              <b>TL;DR &mdash; One model, any sensors.</b> A few 3D keypoints, six IMU rotations, or a
+              single head-tracker pose are enough to recover full-body 3D motion &mdash; in one step, at
+              over 700&nbsp;FPS. Motion capture no longer needs a dedicated model for each sensor setup:
+              whatever a device measures is a partial view of one shared body model, and the rest is
+              completed.
+            </p>
           </div>
         </div>
       </div>

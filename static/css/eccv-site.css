@@ -36,3 +36,10 @@
 .table-notes {
   margin-top: 0.8rem;
 }
+
+/* TL;DR callout placement (structure only; the box itself is bulma .notification) */
+.notification.tldr {
+  max-width: 54rem;
+  margin: 1.4rem auto 0;
+  font-size: 1.05rem;
+}
