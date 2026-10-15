@@ -4,6 +4,11 @@ Project website for **OmniPoser: Flexible Human Motion Recovery in the Wild with
 Masked Flow Matching** (ECCV 2026), built on the
 [nerfies](https://github.com/nerfies/nerfies.github.io) project-page template.
 
+Paper: [arXiv:2610.19857](https://arxiv.org/abs/2610.19857) ·
+[DOI 10.1007/978-3-032-37032-7_1](https://doi.org/10.1007/978-3-032-37032-7_1)
+(ECCV 2026 LNCS 17075). Live at
+<https://jamesbridgewater51.github.io/omniposer-eccv/>.
+
 ## Preview locally
 
 ```bash
